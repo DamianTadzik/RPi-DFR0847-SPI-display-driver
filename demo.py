@@ -7,6 +7,7 @@ from dfr0847 import DFR0847
 
 WIDTH = 160
 HEIGHT = 80
+FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
 
 def color_test(display):
@@ -85,6 +86,40 @@ def text_demo(display):
     time.sleep(3)
 
 
+def font_size_demo(display):
+    """Show several TrueType font sizes on two white test pages."""
+    print("Font size demo")
+
+    pages = [
+        [8, 10, 12],
+        [14, 18, 24],
+    ]
+
+    for sizes in pages:
+        image = Image.new("RGB", (WIDTH, HEIGHT), "white")
+        draw = ImageDraw.Draw(image)
+
+        y = 1
+
+        for size in sizes:
+            font = ImageFont.truetype(FONT_PATH, size)
+            text = f"{size}px texT"
+
+            draw.text(
+                (2, y),
+                text,
+                font=font,
+                fill="black",
+            )
+
+            bbox = draw.textbbox((2, y), text, font=font)
+            text_height = bbox[3] - bbox[1]
+            y += text_height + 4
+
+        display.show(image)
+        time.sleep(3)
+
+
 def brightness_demo(display):
     print("Backlight PWM test")
 
@@ -152,6 +187,7 @@ def main():
         color_test(display)
         graphics_demo(display)
         text_demo(display)
+        font_size_demo(display)
         brightness_demo(display)
         final_screen(display)
 
