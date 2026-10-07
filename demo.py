@@ -7,7 +7,11 @@ from dfr0847 import DFR0847
 
 WIDTH = 160
 HEIGHT = 80
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+
+
+def font(size):
+    """Return Pillow's built-in font at the requested size."""
+    return ImageFont.load_default(size=size)
 
 
 def color_test(display):
@@ -33,18 +37,15 @@ def graphics_demo(display):
     image = Image.new("RGB", (WIDTH, HEIGHT), "black")
     draw = ImageDraw.Draw(image)
 
-    # Background border
     draw.rectangle(
         (0, 0, WIDTH - 1, HEIGHT - 1),
         outline="white",
     )
 
-    # RGB rectangles
     draw.rectangle((5, 5, 45, 25), fill="red")
     draw.rectangle((60, 5, 100, 25), fill="green")
     draw.rectangle((115, 5, 154, 25), fill="blue")
 
-    # Lines
     draw.line((5, 35, 155, 35), fill="white")
     draw.line((5, 40, 155, 70), fill="yellow")
     draw.line((5, 70, 155, 40), fill="cyan")
@@ -59,26 +60,24 @@ def text_demo(display):
     image = Image.new("RGB", (WIDTH, HEIGHT), "black")
     draw = ImageDraw.Draw(image)
 
-    font = ImageFont.load_default()
-
     draw.text(
-        (8, 8),
+        (5, 3),
         "DFRobot DFR0847",
-        font=font,
+        font=font(14),
         fill="white",
     )
 
     draw.text(
-        (8, 28),
+        (5, 28),
         "Raspberry Pi Zero W",
-        font=font,
+        font=font(12),
         fill="cyan",
     )
 
     draw.text(
-        (8, 48),
+        (5, 51),
         "SPI display works!",
-        font=font,
+        font=font(14),
         fill="lime",
     )
 
@@ -87,7 +86,6 @@ def text_demo(display):
 
 
 def font_size_demo(display):
-    """Show several TrueType font sizes on two white test pages."""
     print("Font size demo")
 
     pages = [
@@ -102,17 +100,22 @@ def font_size_demo(display):
         y = 1
 
         for size in sizes:
-            font = ImageFont.truetype(FONT_PATH, size)
-            text = f"{size}px texT"
+            current_font = font(size)
+            text = f"{size}px textTEXT"
 
             draw.text(
                 (2, y),
                 text,
-                font=font,
+                font=current_font,
                 fill="black",
             )
 
-            bbox = draw.textbbox((2, y), text, font=font)
+            bbox = draw.textbbox(
+                (2, y),
+                text,
+                font=current_font,
+            )
+
             text_height = bbox[3] - bbox[1]
             y += text_height + 4
 
@@ -126,12 +129,10 @@ def brightness_demo(display):
     image = Image.new("RGB", (WIDTH, HEIGHT), "white")
     draw = ImageDraw.Draw(image)
 
-    font = ImageFont.load_default()
-
     draw.text(
-        (35, 35),
+        (10, 27),
         "PWM BACKLIGHT",
-        font=font,
+        font=font(18),
         fill="black",
     )
 
@@ -156,24 +157,22 @@ def final_screen(display):
     image = Image.new("RGB", (WIDTH, HEIGHT), (10, 10, 20))
     draw = ImageDraw.Draw(image)
 
-    font = ImageFont.load_default()
-
     draw.rectangle(
         (3, 3, 156, 76),
         outline="cyan",
     )
 
     draw.text(
-        (47, 20),
+        (42, 13),
         "DFR0847",
-        font=font,
+        font=font(18),
         fill="white",
     )
 
     draw.text(
-        (42, 40),
+        (37, 42),
         "READY :)",
-        font=font,
+        font=font(20),
         fill="lime",
     )
 
