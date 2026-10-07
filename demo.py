@@ -292,6 +292,93 @@ def final_screen(display):
     display.show(image)
 
 
+def gif_demo(display, duration=10):
+    print("GIF demo")
+
+    gif_paths = [
+        "media/popejp2-ezgif.com.gif",
+        "media/popeleone-ezgif.com.gif",
+    ]
+
+    def load_gif(path):
+        gif = Image.open(path)
+
+        frames = []
+        durations = []
+
+        frame_index = 0
+
+        while True:
+            try:
+                gif.seek(frame_index)
+            except EOFError:
+                break
+
+            frame = gif.convert("RGB").copy()
+
+            if frame.size != (80, 80):
+                raise ValueError(
+                    f"{path}: expected 80x80, got {frame.size}"
+                )
+
+            frames.append(frame)
+
+            frame_duration = gif.info.get("duration", 100) / 1000.0
+
+            # Avoid pathological 0 ms frames
+            frame_duration = max(frame_duration, 0.02)
+
+            durations.append(frame_duration)
+
+            frame_index += 1
+
+        return frames, durations
+
+    frames1, durations1 = load_gif(gif_paths[0])
+    frames2, durations2 = load_gif(gif_paths[1])
+
+    print(f"GIF 1: {len(frames1)} frames")
+    print(f"GIF 2: {len(frames2)} frames")
+
+    start = time.monotonic()
+
+    index1 = 0
+    index2 = 0
+
+    next1 = start + durations1[0]
+    next2 = start + durations2[0]
+
+    # Initial frame
+    canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
+    canvas.paste(frames1[0], (0, 0))
+    canvas.paste(frames2[0], (80, 0))
+    display.show(canvas)
+
+    while time.monotonic() - start < duration:
+        now = time.monotonic()
+        changed = False
+
+        while now >= next1:
+            index1 = (index1 + 1) % len(frames1)
+            next1 += durations1[index1]
+            changed = True
+
+        while now >= next2:
+            index2 = (index2 + 1) % len(frames2)
+            next2 += durations2[index2]
+            changed = True
+
+        if changed:
+            canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
+
+            canvas.paste(frames1[index1], (0, 0))
+            canvas.paste(frames2[index2], (80, 0))
+
+            display.show(canvas)
+
+        time.sleep(0.02)
+
+
 def main():
     print("Starting DFR0847 demo")
 
@@ -303,6 +390,7 @@ def main():
         font_size_demo(display)
         custom_fonts_demo(display)
         brightness_demo(display)
+        gif_demo(display)
         final_screen(display)
 
         print("Demo finished successfully")
