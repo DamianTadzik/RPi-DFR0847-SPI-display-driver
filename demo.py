@@ -123,6 +123,93 @@ def font_size_demo(display):
         time.sleep(3)
 
 
+def custom_fonts_demo(display):
+    print("Custom fonts demo")
+
+    font_tests = [
+        # Spleen
+        ("Spleen 8px",  "fonts/spleen-5x8.ttf", 8),
+        ("Spleen 12px", "fonts/spleen-6x12.ttf", 12),
+        ("Spleen 16px", "fonts/spleen-8x16.ttf", 16),
+        ("Spleen 24px", "fonts/spleen-12x24.ttf", 24),
+
+        # Tamzen
+        ("Tamzen 9px",  "fonts/Tamzen5x9r.ttf", 9),
+        ("Tamzen 12px", "fonts/Tamzen6x12r.ttf", 12),
+        ("Tamzen 16px", "fonts/Tamzen8x16r.ttf", 16),
+        ("Tamzen 20px", "fonts/Tamzen10x20r.ttf", 20),
+
+        # Cherry
+        ("Cherry 10px", "fonts/cherry-10-r.ttf", 10),
+        ("Cherry 12px", "fonts/cherry-12-r.ttf", 12),
+        ("Cherry 13px", "fonts/cherry-13-r.ttf", 13),
+
+        # Cozette
+        ("Cozette 13px", "fonts/CozetteVector.ttf", 13),
+
+        # ProFont
+        ("ProFont 10px", "fonts/ProFont_r400-10.ttf", 10),
+        ("ProFont 12px", "fonts/ProFont_r400-12.ttf", 12),
+        ("ProFont 15px", "fonts/ProFont_r400-15.ttf", 15),
+        ("ProFont 17px", "fonts/ProFont_r400-17.ttf", 17),
+
+        # Gohu
+        ("Gohu 11px", "fonts/gohufont-uni-11.ttf", 11),
+        ("Gohu 14px", "fonts/gohufont-uni-14.ttf", 14),
+
+        # VecTerminus
+        ("Terminus 12px", "fonts/VecTerminus12Medium.otf", 12),
+        ("Terminus 14px", "fonts/VecTerminus14Medium.otf", 14),
+        ("Terminus 16px", "fonts/VecTerminus16Medium.otf", 16),
+        ("Terminus 20px", "fonts/VecTerminus20Medium.otf", 20),
+
+        # Scientifica
+        ("Scientifica 10px", "fonts/scientifica.ttf", 10),
+        ("Scientifica 12px", "fonts/scientifica.ttf", 12),
+        ("Scientifica 14px", "fonts/scientifica.ttf", 14),
+        ("Scientifica 16px", "fonts/scientifica.ttf", 16),
+    ]
+
+    for name, path, size in font_tests:
+        print(name)
+
+        image = Image.new("RGB", (WIDTH, HEIGHT), "white")
+        draw = ImageDraw.Draw(image)
+
+        # Important for pixel fonts:
+        # disable antialiasing where Pillow supports it.
+        draw.fontmode = "1"
+
+        test_font = ImageFont.truetype(path, size)
+
+        # Font name / size using Pillow default font
+        draw.text(
+            (2, 2),
+            name,
+            font=font(10),
+            fill=(100, 100, 100),
+        )
+
+        # Main sample
+        draw.text(
+            (2, 20),
+            "textTEXT 0123",
+            font=test_font,
+            fill="black",
+        )
+
+        # Characters useful for checking readability
+        draw.text(
+            (2, 20 + size + 5),
+            "Il1 O0 5S 8B",
+            font=test_font,
+            fill="black",
+        )
+
+        display.show(image)
+        time.sleep(2)
+
+
 def brightness_demo(display):
     print("Backlight PWM test")
 
@@ -187,6 +274,7 @@ def main():
         graphics_demo(display)
         text_demo(display)
         font_size_demo(display)
+        custom_fonts_demo(display)
         brightness_demo(display)
         final_screen(display)
 
