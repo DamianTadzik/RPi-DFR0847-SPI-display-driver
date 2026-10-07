@@ -1,6 +1,6 @@
 import time
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from dfr0847 import DFR0847
 
@@ -239,6 +239,32 @@ def brightness_demo(display):
 
     time.sleep(1)
 
+def image_demo(display):
+    print("Image demo")
+
+    path = "media/Bliss_(Windows_XP).png"
+
+    original = Image.open(path).convert("RGB")
+
+    variants = [
+        ("resize/stretch", original.resize((WIDTH, HEIGHT), Image.Resampling.LANCZOS)),
+        ("contain", ImageOps.contain(original, (WIDTH, HEIGHT), Image.Resampling.LANCZOS)),
+        ("fit", ImageOps.fit(original, (WIDTH, HEIGHT), method=Image.Resampling.LANCZOS)),
+    ]
+
+    for name, image in variants:
+        print(name)
+
+        # contain() moze zwrocic mniejszy obrazek, wiec wklejamy go na czarne tlo 160x80
+        if image.size != (WIDTH, HEIGHT):
+            canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
+            x = (WIDTH - image.width) // 2
+            y = (HEIGHT - image.height) // 2
+            canvas.paste(image, (x, y))
+            image = canvas
+
+        display.show(image)
+        time.sleep(3)
 
 def final_screen(display):
     image = Image.new("RGB", (WIDTH, HEIGHT), (10, 10, 20))
@@ -272,6 +298,7 @@ def main():
     with DFR0847() as display:
         color_test(display)
         graphics_demo(display)
+        image_demo(display)
         text_demo(display)
         font_size_demo(display)
         custom_fonts_demo(display)
