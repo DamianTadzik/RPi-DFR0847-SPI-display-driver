@@ -57,8 +57,8 @@ def init_display():
     # Memory access control
     command(0x36, [0xC8])
 
-    # Display inversion ON
-    command(0x21)
+    # Display inversion OFF
+    command(0x20)  
 
     # Normal display mode
     command(0x13)
@@ -70,12 +70,12 @@ def init_display():
 
 
 def fill_screen(color):
-    width = 160
-    height = 80
+    width = 80
+    height = 160
 
     # ST7735 160x80 panel RAM offset.
-    x_offset = 1
-    y_offset = 26
+    x_offset = 24
+    y_offset = 0
 
     x0 = x_offset
     x1 = x_offset + width - 1
