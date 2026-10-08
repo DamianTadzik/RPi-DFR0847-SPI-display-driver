@@ -1,145 +1,208 @@
+#!/usr/bin/env python3
+"""
+Minimal dashboard runner for DFR0847 display.
+
+- Implement or extend `get_data()` to read real values.
+- Implement or extend `make_display(data)` to render custom panel.
+- Dev mode: `python3 main.py --dev` writes `dev_preview.png`.
+- Hardware: `python3 main.py` uses `DFR0847().show(image)`.
+"""
+
+import argparse
 import time
+import subprocess
+from datetime import datetime
 
-import spidev
-from gpiozero import OutputDevice
+from PIL import Image, ImageDraw, ImageFont
 
+# Try hardware driver (allowed to fail in dev)
+try:
+    from dfr0847 import DFR0847
+except Exception:
+    DFR0847 = None
 
-# BCM GPIO numbering
-RST_PIN = 23
-DC_PIN = 24
-BL_PIN = 18
-
-
-rst = OutputDevice(RST_PIN)
-dc = OutputDevice(DC_PIN)
-bl = OutputDevice(BL_PIN)
-
-spi = spidev.SpiDev()
-spi.open(0, 0)                  # SPI0, CE0 = GPIO8 / physical pin 24
-spi.max_speed_hz = 4_000_000    # zaczynamy spokojnie od 4 MHz
-spi.mode = 0
-
-
-def command(cmd, data=None):
-    dc.off()
-    spi.xfer2([cmd])
-
-    if data:
-        dc.on()
-        spi.xfer2(list(data))
+WIDTH, HEIGHT = 160, 80
+# Default VecTerminus family you picked
+FONTS = {
+    "t12": "fonts/VecTerminus12Medium.otf",
+    "t14": "fonts/VecTerminus14Medium.otf",
+    "t16": "fonts/VecTerminus16Medium.otf",
+}
 
 
-def reset():
-    rst.on()
-    time.sleep(0.05)
-
-    rst.off()
-    time.sleep(0.05)
-
-    rst.on()
-    time.sleep(0.15)
+def safe_truetype(path, size):
+    try:
+        return ImageFont.truetype(path, size)
+    except Exception:
+        return ImageFont.load_default()
 
 
-def init_display():
-    reset()
+# -----------------------
+# User-extensible parts
+# -----------------------
 
-    # Software reset
-    command(0x01)
-    time.sleep(0.15)
+def get_data(dev=False):
+    """
+    Return a dict with status values. Example structure:
+    {
+        "time": "HH:MM:SS",
+        "eth": {"present": True, "up": True, "addr": "192.168.1.10"},
+        "wlan": {"present": False, "up": False, "addr": None},
+        "uptime_s": 12345,
+        "cpu_temp_c": 42.1,
+        "note": "optional custom text",
+        "refresh": 1.0
+    }
 
-    # Sleep out
-    command(0x11)
-    time.sleep(0.15)
+    In dev mode this returns sensible dummy values. In real mode try to probe system.
+    Extend this function to add more probes (internet, services, etc).
+    """
+    if dev:
+        return {
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "eth": {"present": True, "up": True, "addr": "192.168.0.42"},
+            "wlan": {"present": True, "up": False, "addr": None},
+            "uptime_s": 3600 * 5 + 23 * 60,
+            "cpu_temp_c": 48.3,
+            "note": "DEV DUMMY",
+            "refresh": 1.0,
+        }
 
-    # 16-bit RGB565
-    command(0x3A, [0x05])
+    # Real probes (best-effort, failures become None or sensible fallback)
+    def _run(cmd):
+        try:
+            out = subprocess.check_output(cmd, shell=True, stderr=subprocess.DEVNULL)
+            return out.decode().strip()
+        except Exception:
+            return ""
 
-    # Memory access control
-    command(0x36, [0xC8])
+    def iface_info(iface):
+        info = {"present": False, "up": False, "addr": None}
+        link = _run(f"ip link show dev {iface}")
+        if not link:
+            return info
+        info["present"] = True
+        info["up"] = ("state UP" in link) or ("UP" in link.split())
+        inet = _run(f"ip -4 addr show dev {iface} | grep -oP '(?<=inet\\s)\\d+\\.\\d+\\.\\d+\\.\\d+' || true")
+        if inet:
+            info["addr"] = inet
+        return info
 
-    # Display inversion OFF
-    command(0x20)  
+    # uptime
+    uptime_s = None
+    try:
+        with open("/proc/uptime", "r") as f:
+            uptime_s = int(float(f.readline().split()[0]))
+    except Exception:
+        uptime_s = None
 
-    # Normal display mode
-    command(0x13)
-    time.sleep(0.01)
+    # cpu temp
+    cpu_t = None
+    try:
+        s = open("/sys/class/thermal/thermal_zone0/temp").read().strip()
+        cpu_t = int(s) / 1000.0
+    except Exception:
+        cpu_t = None
 
-    # Display ON
-    command(0x29)
-    time.sleep(0.1)
-
-
-def fill_screen(color):
-    width = 80
-    height = 160
-
-    # ST7735 160x80 panel RAM offset.
-    x_offset = 24
-    y_offset = 0
-
-    x0 = x_offset
-    x1 = x_offset + width - 1
-    y0 = y_offset
-    y1 = y_offset + height - 1
-
-    # Column address
-    command(0x2A, [
-        0x00, x0,
-        0x00, x1,
-    ])
-
-    # Row address
-    command(0x2B, [
-        0x00, y0,
-        0x00, y1,
-    ])
-
-    # Memory write
-    dc.off()
-    spi.xfer2([0x2C])
-    dc.on()
-
-    high = (color >> 8) & 0xFF
-    low = color & 0xFF
-
-    # Send in chunks so spidev doesn't complain about transfer size.
-    pixels_per_chunk = 1024
-    chunk = [high, low] * pixels_per_chunk
-
-    pixels_left = width * height
-
-    while pixels_left:
-        n = min(pixels_left, pixels_per_chunk)
-        spi.xfer2(chunk[:n * 2])
-        pixels_left -= n
+    return {
+        "time": datetime.now().strftime("%H:%M:%S"),
+        "eth": iface_info("eth0"),
+        "wlan": iface_info("wlan0"),
+        "uptime_s": uptime_s,
+        "cpu_temp_c": cpu_t,
+        "note": "",
+        "refresh": 1.0,
+    }
 
 
-def main():
-    print("Initializing DFR0847...")
+def make_display(data):
+    """
+    Given `data` (from get_data), return a PIL.Image sized WIDTHxHEIGHT.
+    Edit this function to change layout / widgets.
+    """
+    img = Image.new("RGB", (WIDTH, HEIGHT), "black")
+    draw = ImageDraw.Draw(img)
 
-    bl.on()
-    init_display()
+    f_small = safe_truetype(FONTS["t12"], 10)
+    f_mid = safe_truetype(FONTS["t14"], 12)
+    f_big = safe_truetype(FONTS["t16"], 16)
 
-    print("RED")
-    fill_screen(0xF800)
-    time.sleep(1)
+    # Header (compact)
+    draw.rectangle((0, 0, WIDTH - 1, 18), fill=(6, 12, 20))
+    draw.text((WIDTH - 60, 1), data.get("time", "--:--:--"), font=f_big, fill="white")
 
-    print("GREEN")
-    fill_screen(0x07E0)
-    time.sleep(1)
+    # Network
+    eth = data.get("eth", {})
+    wlan = data.get("wlan", {})
 
-    print("BLUE")
-    fill_screen(0x001F)
-    time.sleep(1)
+    def _status_text(iface):
+        if not iface.get("present"):
+            return "no hw"
+        if iface.get("addr"):
+            return iface["addr"]
+        return "UP" if iface.get("up") else "down"
 
-    print("WHITE")
-    fill_screen(0xFFFF)
+    draw.text((4, 22), "ETH:", font=f_mid, fill="white")
+    draw.text((42, 22), _status_text(eth), font=f_mid, fill="lime" if eth.get("up") else "red")
 
-    print("Display test finished.")
+    draw.text((4, 36), "WLAN:", font=f_mid, fill="white")
+    draw.text((42, 36), _status_text(wlan), font=f_mid, fill="lime" if wlan.get("up") else "red")
+
+    # System
+    up = data.get("uptime_s")
+    if up is not None:
+        h = up // 3600
+        m = (up % 3600) // 60
+        draw.text((4, 50), f"Uptime: {h}h{m}m", font=f_mid, fill="white")
+    else:
+        draw.text((4, 50), "Uptime: n/a", font=f_mid, fill="white")
+
+    cpu = data.get("cpu_temp_c")
+    if cpu is not None:
+        draw.text((4, 62), f"CPU: {cpu:.1f}C", font=f_mid, fill="white")
+    else:
+        draw.text((4, 62), "CPU: n/a", font=f_mid, fill="white")
+
+    note = data.get("note", "")
+    if note:
+        draw.text((80, 36), note[:26], font=f_mid, fill="yellow")
+
+    draw.rectangle((0, 0, WIDTH - 1, HEIGHT - 1), outline=(30, 60, 80))
+    return img
+
+
+# -----------------------
+# Runner
+# -----------------------
+
+def run_loop(dev=False):
+    if dev:
+        print("Running in dev mode (writes dev_preview.png)")
+    else:
+        if DFR0847 is None:
+            print("DFR0847 driver not available, falling back to dev mode")
+            dev = True
+
+    try:
+        if dev:
+            while True:
+                data = get_data(dev=True)
+                img = make_display(data)
+                img.save("dev_preview.png")
+                time.sleep(max(0.1, data.get("refresh", 1.0)))
+        else:
+            with DFR0847() as display:
+                while True:
+                    data = get_data(dev=False)
+                    img = make_display(data)
+                    display.show(img)
+                    time.sleep(max(0.1, data.get("refresh", 1.0)))
+    except KeyboardInterrupt:
+        print("Stopped by user")
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    finally:
-        spi.close()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dev", action="store_true", help="use dummy values and save dev_preview.png")
+    args = parser.parse_args()
+    run_loop(dev=args.dev)
