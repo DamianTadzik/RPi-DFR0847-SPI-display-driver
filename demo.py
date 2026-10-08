@@ -1,6 +1,7 @@
 import time
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+import sys, termios, tty, select
 
 from dfr0847 import DFR0847
 
@@ -169,45 +170,94 @@ def custom_fonts_demo(display):
         ("Scientifica 14px", "fonts/scientifica.ttf", 14),
         ("Scientifica 16px", "fonts/scientifica.ttf", 16),
     ]
-
-    for name, path, size in font_tests:
-        print(name)
-
+    def _read_key(timeout):
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setcbreak(fd)
+            r, _, _ = select.select([sys.stdin], [], [], timeout)
+            if not r:
+                return None
+            ch = sys.stdin.read(1)
+            if ch == "\x1b":
+                seq = sys.stdin.read(2)
+                if seq == "[D":
+                    return "LEFT"
+                if seq == "[C":
+                    return "RIGHT"
+                return None
+            if ch in ("q", "Q"):
+                return "QUIT"
+            return ch
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    duration_per_font = 2.0
+    index = 0
+    count = len(font_tests)
+    while True:
+        name, path, size = font_tests[index]
+        print(f"[{index+1}/{count}] {name}")
         image = Image.new("RGB", (WIDTH, HEIGHT), "white")
         draw = ImageDraw.Draw(image)
-
-        # Important for pixel fonts:
-        # disable antialiasing where Pillow supports it.
         draw.fontmode = "1"
-
-        test_font = ImageFont.truetype(path, size)
-
-        # Font name / size using Pillow default font
-        draw.text(
-            (2, 2),
-            name,
-            font=font(10),
-            fill=(100, 100, 100),
-        )
-
-        # Main sample
-        draw.text(
-            (2, 20),
-            "textTEXT 0123",
-            font=test_font,
-            fill="black",
-        )
-
-        # Characters useful for checking readability
-        draw.text(
-            (2, 20 + size + 5),
-            "Il1 O0 5S 8B",
-            font=test_font,
-            fill="black",
-        )
-
+        try:
+            test_font = ImageFont.truetype(path, size)
+        except Exception:
+            test_font = font(size)
+            draw.text((2, 20), "(font load failed)", font=font(10), fill=(255, 0, 0))
+        draw.text((2, 2), name, font=font(10), fill=(100, 100, 100))
+        draw.text((2, 20), "textTEXT 0123", font=test_font, fill="black")
+        draw.text((2, 20 + size + 5), "Il1 O0 5S 8B", font=test_font, fill="black")
         display.show(image)
-        time.sleep(2)
+        remaining = duration_per_font
+        last = time.monotonic()
+        while remaining > 0:
+            key = _read_key(timeout=min(0.1, remaining))
+            now = time.monotonic()
+            remaining -= now - last
+            last = now
+
+            if key == "RIGHT":
+                index = (index + 1) % count
+                break
+            if key == "LEFT":
+                index = (index - 1) % count
+                break
+            if key == "QUIT":
+                return
+        else:
+            index = (index + 1) % count
+    # for name, path, size in font_tests:
+    #     print(name)
+    #     image = Image.new("RGB", (WIDTH, HEIGHT), "white")
+    #     draw = ImageDraw.Draw(image)
+    #     # Important for pixel fonts:
+    #     # disable antialiasing where Pillow supports it.
+    #     draw.fontmode = "1"
+    #     test_font = ImageFont.truetype(path, size)
+    #     # Font name / size using Pillow default font
+    #     draw.text(
+    #         (2, 2),
+    #         name,
+    #         font=font(10),
+    #         fill=(100, 100, 100),
+    #     )
+    #     # Main sample
+    #     draw.text(
+    #         (2, 20),
+    #         "textTEXT 0123",
+    #         font=test_font,
+    #         fill="black",
+    #     )
+    #     # Characters useful for checking readability
+    #     draw.text(
+    #         (2, 20 + size + 5),
+    #         "Il1 O0 5S 8B",
+    #         font=test_font,
+    #         fill="black",
+    #     )
+    #     display.show(image)
+    #     time.sleep(2)
 
 
 def brightness_demo(display):
