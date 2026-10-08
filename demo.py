@@ -301,36 +301,33 @@ def gif_demo(display, duration=10):
     ]
 
     def load_gif(path):
-        gif = Image.open(path)
-
         frames = []
         durations = []
 
-        frame_index = 0
+        with Image.open(path) as gif:
+            frame_index = 0
 
-        while True:
-            try:
-                gif.seek(frame_index)
-            except EOFError:
-                break
+            while True:
+                try:
+                    gif.seek(frame_index)
+                except EOFError:
+                    break
 
-            frame = gif.convert("RGB").copy()
+                frame = gif.convert("RGB").copy()
 
-            if frame.size != (80, 80):
-                raise ValueError(
-                    f"{path}: expected 80x80, got {frame.size}"
-                )
+                if frame.size != (80, 80):
+                    raise ValueError(
+                        f"{path}: expected 80x80, got {frame.size}"
+                    )
 
-            frames.append(frame)
+                frames.append(frame)
 
-            frame_duration = gif.info.get("duration", 100) / 1000.0
+                frame_duration = gif.info.get("duration", 100) / 1000.0
+                frame_duration = max(frame_duration, 0.02)
 
-            # Avoid pathological 0 ms frames
-            frame_duration = max(frame_duration, 0.02)
+                durations.append(frame_duration)
 
-            durations.append(frame_duration)
-
-            frame_index += 1
+                frame_index += 1
 
         return frames, durations
 
@@ -340,43 +337,49 @@ def gif_demo(display, duration=10):
     print(f"GIF 1: {len(frames1)} frames")
     print(f"GIF 2: {len(frames2)} frames")
 
-    start = time.monotonic()
-
     index1 = 0
     index2 = 0
 
-    next1 = start + durations1[0]
-    next2 = start + durations2[0]
-
-    # Initial frame
+    # Create canvas ONCE
     canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
-    canvas.paste(frames1[0], (0, 0))
-    canvas.paste(frames2[0], (80, 0))
+
+    canvas.paste(frames1[index1], (0, 0))
+    canvas.paste(frames2[index2], (80, 0))
+
     display.show(canvas)
+
+    start = time.monotonic()
+
+    next1 = start + durations1[index1]
+    next2 = start + durations2[index2]
 
     while time.monotonic() - start < duration:
         now = time.monotonic()
-        changed = False
+
+        changed1 = False
+        changed2 = False
 
         while now >= next1:
             index1 = (index1 + 1) % len(frames1)
             next1 += durations1[index1]
-            changed = True
+            changed1 = True
 
         while now >= next2:
             index2 = (index2 + 1) % len(frames2)
             next2 += durations2[index2]
-            changed = True
+            changed2 = True
 
-        if changed:
-            canvas = Image.new("RGB", (WIDTH, HEIGHT), "black")
-
+        # Update only the side that actually changed
+        if changed1:
             canvas.paste(frames1[index1], (0, 0))
+
+        if changed2:
             canvas.paste(frames2[index2], (80, 0))
 
+        if changed1 or changed2:
             display.show(canvas)
 
-        time.sleep(0.02)
+        time.sleep(0.001)
 
 
 def main():

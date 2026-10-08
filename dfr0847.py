@@ -32,7 +32,7 @@ class DFR0847:
         rst_pin=23,
         dc_pin=24,
         bl_pin=18,
-        spi_speed_hz=16_000_000,
+        spi_speed_hz=40_000_000,
     ):
         self.rst = OutputDevice(rst_pin)
         self.dc = OutputDevice(dc_pin)
