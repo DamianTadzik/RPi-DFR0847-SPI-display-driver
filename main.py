@@ -22,19 +22,12 @@ except Exception:
     DFR0847 = None
 
 WIDTH, HEIGHT = 160, 80
-# Default VecTerminus family you picked
 FONTS = {
-    "t12": "fonts/VecTerminus12Medium.otf",
-    "t14": "fonts/VecTerminus14Medium.otf",
-    "t16": "fonts/VecTerminus16Medium.otf",
+    "t12": ImageFont.truetype("fonts/VecTerminus12Medium.otf", 12),
+    "t14": ImageFont.truetype("fonts/VecTerminus14Medium.otf", 14),
+    "t16": ImageFont.truetype("fonts/VecTerminus16Medium.otf", 16),
+    "t20": ImageFont.truetype("fonts/VecTerminus20Medium.otf", 20),
 }
-
-
-def safe_truetype(path, size):
-    try:
-        return ImageFont.truetype(path, size)
-    except Exception:
-        return ImageFont.load_default()
 
 
 # -----------------------
@@ -123,13 +116,10 @@ def make_display(data):
     img = Image.new("RGB", (WIDTH, HEIGHT), "black")
     draw = ImageDraw.Draw(img)
 
-    f_small = safe_truetype(FONTS["t12"], 10)
-    f_mid = safe_truetype(FONTS["t14"], 12)
-    f_big = safe_truetype(FONTS["t16"], 16)
 
-    # Header (compact)
-    draw.rectangle((0, 0, WIDTH - 1, 18), fill=(6, 12, 20))
-    draw.text((WIDTH - 60, 1), data.get("time", "--:--:--"), font=f_big, fill="white")
+    # # Header (compact)
+    # draw.rectangle((0, 0, WIDTH - 1, 18), fill=(6, 12, 20))
+    # draw.text((WIDTH - 60, 1), data.get("time", "--:--:--"), font=f_big, fill="white")
 
     # Network
     eth = data.get("eth", {})
@@ -142,30 +132,30 @@ def make_display(data):
             return iface["addr"]
         return "UP" if iface.get("up") else "down"
 
-    draw.text((4, 22), "ETH:", font=f_mid, fill="white")
-    draw.text((42, 22), _status_text(eth), font=f_mid, fill="lime" if eth.get("up") else "red")
+    draw.text((1, 0), "ETH:", font=FONTS["t16"], fill="white")
+    draw.text((42, 0), _status_text(eth), font=FONTS["t16"], fill="lime" if eth.get("up") else "red")
 
-    draw.text((4, 36), "WLAN:", font=f_mid, fill="white")
-    draw.text((42, 36), _status_text(wlan), font=f_mid, fill="lime" if wlan.get("up") else "red")
+    draw.text((1, 16), "WLAN:", font=FONTS["t16"], fill="white")
+    draw.text((42, 16), _status_text(wlan), font=FONTS["t16"], fill="lime" if wlan.get("up") else "red")
 
     # System
     up = data.get("uptime_s")
     if up is not None:
         h = up // 3600
         m = (up % 3600) // 60
-        draw.text((4, 50), f"Uptime: {h}h{m}m", font=f_mid, fill="white")
+        draw.text((1, 32), f"Uptime: {h}h{m}m", font=FONTS["t16"], fill="white")
     else:
-        draw.text((4, 50), "Uptime: n/a", font=f_mid, fill="white")
+        draw.text((1, 32), "Uptime: n/a", font=FONTS["t16"], fill="white")
 
     cpu = data.get("cpu_temp_c")
     if cpu is not None:
-        draw.text((4, 62), f"CPU: {cpu:.1f}C", font=f_mid, fill="white")
+        draw.text((1, 48), f"CPU: {cpu:.1f}C", font=FONTS["t16"], fill="white")
     else:
-        draw.text((4, 62), "CPU: n/a", font=f_mid, fill="white")
+        draw.text((1, 48), "CPU: n/a", font=FONTS["t16"], fill="white")
 
     note = data.get("note", "")
     if note:
-        draw.text((80, 36), note[:26], font=f_mid, fill="yellow")
+        draw.text((1, 60), note[:26], font=FONTS["t20"], fill="yellow")
 
     draw.rectangle((0, 0, WIDTH - 1, HEIGHT - 1), outline=(30, 60, 80))
     return img
