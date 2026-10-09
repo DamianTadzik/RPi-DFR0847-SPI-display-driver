@@ -57,7 +57,7 @@ def get_data(dev=False):
             "wlan": {"present": True, "up": False, "addr": None},
             "uptime_s": 3600 * 5 + 23 * 60,
             "cpu_temp_c": 48.3,
-            "note": "DEV DUMMY",
+            "note": "DEV",
             "refresh": 1.0,
         }
 
@@ -119,7 +119,7 @@ def make_display(data):
 
     # # Header (compact)
     # draw.rectangle((0, 0, WIDTH - 1, 18), fill=(6, 12, 20))
-    # draw.text((WIDTH - 60, 1), data.get("time", "--:--:--"), font=f_big, fill="white")
+    draw.text((1, 0), data.get("time", "--:--:--"), font=FONTS["t16"], fill="white")
 
     # Network
     eth = data.get("eth", {})
@@ -132,32 +132,31 @@ def make_display(data):
             return iface["addr"]
         return "UP" if iface.get("up") else "down"
 
-    draw.text((1, 0), "ETH:", font=FONTS["t16"], fill="white")
-    draw.text((42, 0), _status_text(eth), font=FONTS["t16"], fill="lime" if eth.get("up") else "red")
+    draw.text((0, 16), "ETH:", font=FONTS["t16"], fill="white")
+    draw.text((40, 16), _status_text(eth), font=FONTS["t16"], fill="lime" if eth.get("up") else "red")
 
-    draw.text((1, 16), "WLAN:", font=FONTS["t16"], fill="white")
-    draw.text((42, 16), _status_text(wlan), font=FONTS["t16"], fill="lime" if wlan.get("up") else "red")
+    draw.text((0, 32), "WLAN:", font=FONTS["t16"], fill="white")
+    draw.text((40, 32), _status_text(wlan), font=FONTS["t16"], fill="lime" if wlan.get("up") else "red")
 
     # System
     up = data.get("uptime_s")
     if up is not None:
         h = up // 3600
         m = (up % 3600) // 60
-        draw.text((1, 32), f"Uptime: {h}h{m}m", font=FONTS["t16"], fill="white")
+        draw.text((0, 48), f"Uptime: {h}h{m}m", font=FONTS["t16"], fill="white")
     else:
-        draw.text((1, 32), "Uptime: n/a", font=FONTS["t16"], fill="white")
+        draw.text((0, 48), "Uptime: n/a", font=FONTS["t16"], fill="white")
 
     cpu = data.get("cpu_temp_c")
     if cpu is not None:
-        draw.text((1, 48), f"CPU: {cpu:.1f}C", font=FONTS["t16"], fill="white")
+        draw.text((0, 64), f"CPU: {cpu:.1f}C", font=FONTS["t16"], fill="white")
     else:
-        draw.text((1, 48), "CPU: n/a", font=FONTS["t16"], fill="white")
+        draw.text((0, 64), "CPU: n/a", font=FONTS["t16"], fill="white")
 
     note = data.get("note", "")
     if note:
-        draw.text((1, 60), note[:26], font=FONTS["t20"], fill="yellow")
+        draw.text((120, 30), note[:26], font=FONTS["t20"], fill="yellow")
 
-    draw.rectangle((0, 0, WIDTH - 1, HEIGHT - 1), outline=(30, 60, 80))
     return img
 
 
