@@ -16,4 +16,8 @@ Interactive one:
 Few fonts were checked with interactive demo and the most readable ones were:
  - all VecTerminus
  - some Cherry fonts
- 
+
+## To Be Done
+ - Brightness pin test, need to wire the pin and verify how the brightness is working
+ - Automatic startup via services
+ - Few info displays rotation
