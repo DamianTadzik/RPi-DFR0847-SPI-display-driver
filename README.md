@@ -16,6 +16,52 @@ BL         GPIO18  pin 12  PWM0
 ```
 In order to enable SPI run `sudo raspi-config` then `3 Interface Options` then `I4 SPI` then `sudo reboot`
 
+### Run automatically at startup (systemd)
+
+To run `main.py` automatically at boot, create a systemd service:
+
+```bash
+sudo vim /etc/systemd/system/custom_display_SPI.service
+```
+
+Add the following configuration:
+
+```ini
+[Unit]
+Description=DFR0847 SPI Display
+After=local-fs.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/RPi-DFR0847-SPI-display-driver
+ExecStart=/usr/bin/python3 -u /home/pi/RPi-DFR0847-SPI-display-driver/main.py
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now custom_display_SPI.service
+```
+
+**Useful commands:**
+
+```bash
+sudo systemctl restart custom_display_SPI.service
+sudo systemctl stop custom_display_SPI.service
+systemctl status custom_display_SPI.service
+journalctl -u custom_display_SPI.service -f
+```
+
+The display starts automatically on boot without requiring user login.
+
+
 ## Workflow on RPi zero W
 Since RPi zero W does not support VScode over SSH, following commands were used for launching python scripts remotely on the device over WiFi SSH and GitHub. WiFi was shared from Win 11, the RPi got 192.168.137.43
 
