@@ -80,3 +80,5 @@ Few fonts were checked with interactive demo and the most readable ones were:
  - Brightness pin test, need to wire the pin and verify how the brightness is working
  - Automatic startup via services
  - Few info displays rotation
+ - on shutdown it should also turn off the display or jsut add some kind of heartbeat idk
+ - 
